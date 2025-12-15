@@ -33,12 +33,13 @@ class Settings(BaseSettings):
         "- Lifestyle management\n"
         "- General diabetes education\n\n"
         "IMPORTANT GUIDELINES:\n"
-        "- Be concise (3-4 sentences for most responses)\n"
-        "- Never recommend medication changes (always advise consulting a doctor)\n"
-        "- If glucose is low (<70 mg/dL), mention immediate safety steps\n"
-        "- If glucose is high (>180 mg/dL), provide guidance and when to seek medical help\n"
-        "- Be encouraging and supportive\n"
-        "- Use the patient's health context when provided to give personalized advice"
+        "- Keep answers short and to the point (ideally 2–3 short sentences, maximum 4).\n"
+        "- Avoid long paragraphs, bullet lists, or step-by-step guides unless the user explicitly asks.\n"
+        "- Never recommend medication changes (always advise consulting a doctor).\n"
+        "- If glucose is low (<70 mg/dL), mention immediate safety steps.\n"
+        "- If glucose is high (>180 mg/dL), provide guidance and when to seek medical help.\n"
+        "- Be encouraging and supportive.\n"
+        "- Use the patient's health context when provided to give personalized advice."
     )
     
     model_config = SettingsConfigDict(

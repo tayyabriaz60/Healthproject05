@@ -201,27 +201,48 @@ async def unified_chat_endpoint(
         except ValueError as e:
             raise HTTPException(status_code=404, detail=str(e))
         except Exception as e:
-            error_message = str(e)
+            # Original technical error string
+            raw_error_message = str(e)
             
-            # Determine appropriate status code based on error
+            # Default values
             status_code = 500
-            if "overloaded" in error_message.lower() or "503" in error_message:
-                status_code = 503  # Service Unavailable
-            elif "rate limit" in error_message.lower() or "429" in error_message:
-                status_code = 429  # Too Many Requests
-            elif "invalid" in error_message.lower() or "401" in error_message:
-                status_code = 401  # Unauthorized
+            user_message = "We’re having trouble processing your request right now. Please try again in a moment."
+            error_code = "CHAT_PROCESSING_ERROR"
+
+            lower_msg = raw_error_message.lower()
+
+            # Map common backend / Gemini errors to cleaner, professional messages
+            if "overloaded" in lower_msg or "503" in lower_msg:
+                status_code = 503
+                error_code = "SERVICE_UNAVAILABLE"
+                user_message = "The AI service is temporarily unavailable. Please try again shortly."
+            elif "rate limit" in lower_msg or "429" in lower_msg:
+                status_code = 429
+                error_code = "RATE_LIMITED"
+                user_message = "You’ve reached the current request limit. Please wait a bit and try again."
+            elif "401" in lower_msg or "unauthenticated" in lower_msg or "invalid api key" in lower_msg:
+                status_code = 401
+                error_code = "AUTHENTICATION_ERROR"
+                user_message = "The AI service credentials are not valid. Please contact the app administrator."
+            elif "permission_denied" in lower_msg or "your api key was reported as leaked" in lower_msg:
+                status_code = 403
+                error_code = "PERMISSION_DENIED"
+                user_message = "The AI service rejected the request due to a configuration issue. Please contact the app administrator."
             
-            # Log the full error for debugging
+            # Log full details for developers / server logs
             import traceback
             error_trace = traceback.format_exc()
             print(f"Error in chat endpoint: {error_trace}")
-            
+
+            # Return a clean, professional error payload for clients (Flutter, web, etc.)
             raise HTTPException(
-                status_code=status_code, 
+                status_code=status_code,
                 detail={
-                    "error": "Failed to process chat message",
-                    "message": error_message
+                    "error": user_message,
+                    "code": error_code,
+                    # Keep the raw technical message available under a separate field
+                    # so clients can choose whether to show or hide it.
+                    "technical_message": raw_error_message
                 }
             )
 
