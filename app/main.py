@@ -1,0 +1,46 @@
+"""
+FastAPI application entry point.
+Run this file with Uvicorn to start the server.
+"""
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
+from app.api.endpoints import chat, glucose, food
+
+# Create FastAPI application instance
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    debug=settings.DEBUG
+)
+
+# Add CORS middleware for mobile app support
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(chat.api_router)
+app.include_router(glucose.api_router)
+app.include_router(food.api_router)
+
+
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {
+        "message": "Welcome to Chatbot API",
+        "version": settings.APP_VERSION
+    }
+
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy"}
+

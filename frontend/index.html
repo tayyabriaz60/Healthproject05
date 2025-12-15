@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot API Tester</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Chatbot API Tester</h1>
+        
+        <div class="config-section">
+            <label>
+                <strong>API URL:</strong>
+                <input type="text" id="apiUrl" value="http://localhost:8000/api/chat" placeholder="API URL">
+            </label>
+            <button id="testBtn" onclick="testConnection()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">Test Connection</button>
+            <label>
+                <input type="checkbox" id="streamMode"> Enable Streaming
+            </label>
+            <label>
+                <input type="checkbox" id="includeHistory" checked> Include History
+            </label>
+        </div>
+
+        <div class="chat-section">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system">
+                    <strong>System:</strong> Chat started. Send a message to begin!
+                </div>
+            </div>
+            
+            <div class="input-section">
+                <input type="text" id="chatId" placeholder="Chat ID (optional - leave empty for new chat)" />
+                <div class="input-group">
+                    <input type="text" id="messageInput" placeholder="Type your message..." />
+                    <button id="sendBtn" onclick="sendMessage()">Send</button>
+                </div>
+                <button id="clearBtn" onclick="clearChat()">Clear Chat</button>
+            </div>
+        </div>
+
+        <div class="glucose-section">
+            <h3>🩺 Glucose Meter Analysis</h3>
+            <div class="upload-area">
+                <input type="file" id="glucoseImageInput" accept="image/*" style="display: none;" onchange="handleGlucoseImageSelect(event)">
+                <button id="uploadBtn" onclick="document.getElementById('glucoseImageInput').click()" class="upload-button">
+                    📷 Upload Glucose Meter Image
+                </button>
+                <div id="glucoseImagePreview" class="image-preview" style="display: none;">
+                    <img id="glucosePreviewImg" src="" alt="Preview">
+                    <button onclick="clearGlucoseImagePreview()" class="remove-btn">✕ Remove</button>
+                </div>
+                <div id="glucoseResult" class="glucose-result"></div>
+            </div>
+        </div>
+
+        <div class="food-section">
+            <h3>🍽️ Food Analysis</h3>
+            <div class="upload-area">
+                <input type="file" id="foodImageInput" accept="image/*" style="display: none;" onchange="handleFoodImageSelect(event)">
+                <button id="foodUploadBtn" onclick="document.getElementById('foodImageInput').click()" class="upload-button food-button">
+                    📷 Upload Food Image
+                </button>
+                <div class="health-context-input" style="margin-top: 10px;">
+                    <input type="text" id="healthContextInput" placeholder="Optional: Latest glucose reading (e.g., 125 mg/dL)" 
+                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+                </div>
+                <div id="foodImagePreview" class="image-preview" style="display: none;">
+                    <img id="foodPreviewImg" src="" alt="Preview">
+                    <button onclick="clearFoodImagePreview()" class="remove-btn">✕ Remove</button>
+                </div>
+                <div id="foodResult" class="food-result"></div>
+            </div>
+        </div>
+
+        <div class="smart-section">
+            <h3>🤖 Smart Image Analysis (Auto-detect)</h3>
+            <div class="upload-area">
+                <input type="file" id="smartImageInput" accept="image/*" style="display: none;" onchange="handleSmartImageSelect(event)">
+                <button id="smartUploadBtn" onclick="document.getElementById('smartImageInput').click()" class="upload-button smart-button">
+                    📷 Upload Any Image
+                </button>
+                <div class="health-context-input" style="margin-top: 10px;">
+                    <input type="text" id="smartHealthContextInput" placeholder="Optional: Latest glucose reading (for food analysis)" 
+                           style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;">
+                </div>
+                <div id="smartImagePreview" class="image-preview" style="display: none;">
+                    <img id="smartPreviewImg" src="" alt="Preview">
+                    <button onclick="clearSmartImagePreview()" class="remove-btn">✕ Remove</button>
+                </div>
+                <div id="smartResult" class="smart-result"></div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h3>📋 API Info</h3>
+            <p><strong>Chat Endpoint:</strong> POST /api/chat</p>
+            <p><strong>Glucose Endpoint:</strong> POST /api/ai/analyze-glucose</p>
+            <p><strong>Food Endpoint:</strong> POST /api/ai/analyze-food</p>
+            <p><strong>Smart Endpoint:</strong> POST /api/ai/analyze-image</p>
+            <p><strong>Normal Mode:</strong> Complete response + history</p>
+            <p><strong>Streaming Mode:</strong> Real-time chunks + history at end</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

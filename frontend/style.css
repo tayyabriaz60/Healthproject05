@@ -1,0 +1,582 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+
+h1 {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    text-align: center;
+    margin: 0;
+}
+
+.config-section {
+    padding: 20px;
+    background: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+.config-section label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.config-section input[type="text"] {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    min-width: 300px;
+}
+
+.config-section input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.chat-section {
+    display: flex;
+    flex-direction: column;
+    height: 500px;
+}
+
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f8f9fa;
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 12px 15px;
+    border-radius: 10px;
+    max-width: 80%;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.message.user {
+    background: #667eea;
+    color: white;
+    margin-left: auto;
+    text-align: right;
+}
+
+.message.model {
+    background: white;
+    color: #333;
+    border: 1px solid #e9ecef;
+    margin-right: auto;
+}
+
+.message.system {
+    background: #fff3cd;
+    color: #856404;
+    margin: 0 auto;
+    text-align: center;
+    max-width: 100%;
+    font-size: 13px;
+}
+
+.message.error {
+    background: #f8d7da;
+    color: #721c24;
+    margin: 0 auto;
+    text-align: center;
+    max-width: 100%;
+}
+
+.message strong {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+.input-section {
+    padding: 20px;
+    background: white;
+    border-top: 2px solid #e9ecef;
+}
+
+.input-section input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.input-section input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.input-group {
+    display: flex;
+    gap: 10px;
+}
+
+.input-group input {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+#sendBtn {
+    background: #667eea;
+    color: white;
+}
+
+#sendBtn:hover {
+    background: #5568d3;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+#sendBtn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+#clearBtn {
+    width: 100%;
+    margin-top: 10px;
+    background: #dc3545;
+    color: white;
+}
+
+#clearBtn:hover {
+    background: #c82333;
+}
+
+.info-section {
+    padding: 20px;
+    background: #f8f9fa;
+    border-top: 2px solid #e9ecef;
+}
+
+.info-section h3 {
+    margin-bottom: 10px;
+    color: #667eea;
+}
+
+.info-section p {
+    margin: 5px 0;
+    font-size: 13px;
+    color: #666;
+}
+
+.streaming {
+    opacity: 0.7;
+    position: relative;
+}
+
+.streaming::after {
+    content: '...';
+    animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+}
+
+/* Glucose Section Styles */
+.glucose-section {
+    padding: 20px;
+    background: #f8f9fa;
+    border-top: 2px solid #e9ecef;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.glucose-section h3 {
+    margin-bottom: 15px;
+    color: #667eea;
+    font-size: 18px;
+}
+
+.upload-area {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.upload-button {
+    background: #28a745;
+    color: white;
+    padding: 15px 30px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    width: 100%;
+}
+
+.upload-button:hover {
+    background: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+}
+
+.upload-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.image-preview {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background: white;
+    border: 2px dashed #667eea;
+    border-radius: 8px;
+}
+
+.image-preview img {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.remove-btn {
+    background: #dc3545;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.remove-btn:hover {
+    background: #c82333;
+}
+
+.glucose-result {
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    margin-top: 10px;
+    display: none;
+}
+
+.glucose-result.show {
+    display: block;
+    animation: fadeIn 0.3s;
+}
+
+.glucose-result h4 {
+    color: #667eea;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.glucose-reading {
+    background: #e7f3ff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 4px solid #667eea;
+}
+
+.glucose-reading .value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #667eea;
+    margin-bottom: 5px;
+}
+
+.glucose-reading .unit {
+    font-size: 18px;
+    color: #666;
+}
+
+.glucose-analysis {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    line-height: 1.6;
+    color: #333;
+}
+
+.glucose-result.error {
+    background: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
+}
+
+.glucose-result.loading {
+    text-align: center;
+    color: #667eea;
+    font-style: italic;
+}
+
+/* Food Section Styles */
+.food-section {
+    padding: 20px;
+    background: #fff9e6;
+    border-top: 2px solid #e9ecef;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.food-section h3 {
+    margin-bottom: 15px;
+    color: #ff6b35;
+    font-size: 18px;
+}
+
+.upload-button.food-button {
+    background: #ff6b35;
+}
+
+.upload-button.food-button:hover {
+    background: #e55a2b;
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+}
+
+.health-context-input {
+    margin-top: 10px;
+}
+
+.health-context-input input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.health-context-input input:focus {
+    outline: none;
+    border-color: #ff6b35;
+}
+
+.food-result {
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    margin-top: 10px;
+    display: none;
+}
+
+.food-result.show {
+    display: block;
+    animation: fadeIn 0.3s;
+}
+
+.food-result h4 {
+    color: #ff6b35;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.food-meal {
+    background: #fff4e6;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border-left: 4px solid #ff6b35;
+}
+
+.food-meal .meal-name {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ff6b35;
+    margin-bottom: 8px;
+}
+
+.food-meal .calories {
+    font-size: 18px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.food-recommendation {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    line-height: 1.6;
+    color: #333;
+}
+
+.food-recommendation .status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+.food-recommendation .status.yes {
+    background: #28a745;
+    color: white;
+}
+
+.food-recommendation .status.careful {
+    background: #ffc107;
+    color: #856404;
+}
+
+.food-recommendation .status.no {
+    background: #dc3545;
+    color: white;
+}
+
+.food-result.error {
+    background: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
+}
+
+.food-result.loading {
+    text-align: center;
+    color: #ff6b35;
+    font-style: italic;
+}
+
+/* Smart Section Styles */
+.smart-section {
+    padding: 20px;
+    background: #eef7ff;
+    border-top: 2px solid #e9ecef;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.smart-section h3 {
+    margin-bottom: 15px;
+    color: #0d6efd;
+    font-size: 18px;
+}
+
+.upload-button.smart-button {
+    background: #0d6efd;
+}
+
+.upload-button.smart-button:hover {
+    background: #0b5ed7;
+    box-shadow: 0 5px 15px rgba(13, 110, 253, 0.35);
+}
+
+.smart-result {
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    margin-top: 10px;
+    display: none;
+}
+
+.smart-result.show {
+    display: block;
+    animation: fadeIn 0.3s;
+}
+
+.smart-result h4 {
+    color: #0d6efd;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.smart-type {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: white;
+}
+
+.smart-type.glucose {
+    background: #198754;
+}
+
+.smart-type.food {
+    background: #ff6b35;
+}
+
+.smart-type.unknown {
+    background: #6c757d;
+}
+
+.smart-reading, .smart-meal {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 4px solid #0d6efd;
+}
+
+.smart-recommendation {
+    background: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.smart-result.error {
+    background: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
+}
+
+.smart-result.loading {
+    text-align: center;
+    color: #0d6efd;
+    font-style: italic;
+}
+
