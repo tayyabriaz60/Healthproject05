@@ -375,18 +375,21 @@ class GeminiService:
 
         # Build multimodal prompt with image
         prompt = (
-            "Analyze this food image and provide:\n"
-            "1. Food name\n"
-            "2. Estimated calories\n"
-            "3. Whether a diabetes patient should eat this (YES/CAREFUL/NO)\n"
-            "4. Brief recommendation\n\n"
-            "Respond in this exact format:\n"
-            "MEAL_NAME: [name]\n"
-            "CALORIES: [number]\n"
-            "RECOMMENDATION: [YES/CAREFUL/NO] - [reason and advice]"
-            f"{context_part}\n\n"
-            "Be direct and helpful for diabetes management. "
-            "Consider the patient's diabetes condition when making recommendations."
+            "You are a diabetes nutrition assistant. Analyze this food image and reply ONLY with JSON.\n"
+            "Return this JSON shape (no markdown, no extra text):\n"
+            "{\n"
+            '  "meal_name": "<short name>",\n'
+            '  "calories": <number or null>,\n'
+            '  "recommendation_level": "YES" | "CAREFUL" | "NO",\n'
+            '  "recommendation_text": "<1-2 short sentences, concise, patient-friendly>",\n'
+            '  "carbs_g": <number or null>\n'
+            "}\n"
+            "Rules:\n"
+            "- Keep it brief and readable for a patient.\n"
+            "- If unsure, set calories or carbs_g to null.\n"
+            "- recommendation_level must be exactly YES, CAREFUL, or NO.\n"
+            "- Do not include any extra fields or explanations."
+            f"{context_part}"
         )
 
         image_part = genai_types.Part.from_bytes(
@@ -400,48 +403,54 @@ class GeminiService:
         )
 
         response_text = getattr(response, "text", "") or ""
-        
-        # Parse the response
+
         meal_name = None
         calories = None
-        recommendation = None
-        
-        # Extract meal name
-        meal_match = re.search(r"MEAL_NAME:\s*(.+?)(?:\n|$)", response_text, re.IGNORECASE)
-        if meal_match:
-            meal_name = meal_match.group(1).strip()
-        
-        # Extract calories
-        calories_match = re.search(r"CALORIES:\s*(\d+)", response_text, re.IGNORECASE)
-        if calories_match:
-            calories = int(calories_match.group(1))
-        
-        # Extract recommendation
-        rec_match = re.search(r"RECOMMENDATION:\s*(.+?)(?:\n|$)", response_text, re.IGNORECASE | re.DOTALL)
-        if rec_match:
-            recommendation = rec_match.group(1).strip()
-        
-        # If parsing failed, try to extract basic info
+        recommendation_level = None
+        recommendation_text = None
+        carbs_g = None
+
+        # Try JSON parsing first
+        try:
+            import json as _json
+            parsed = _json.loads(response_text)
+            meal_name = parsed.get("meal_name")
+            calories = parsed.get("calories")
+            recommendation_level = parsed.get("recommendation_level")
+            recommendation_text = parsed.get("recommendation_text")
+            carbs_g = parsed.get("carbs_g")
+        except Exception:
+            pass
+
+        # Fallback regex parsing for robustness
         if not meal_name:
-            # Fallback: try to find meal name in first line
-            lines = response_text.split('\n')
-            if lines:
-                meal_name = lines[0].replace('MEAL_NAME:', '').strip() or "Unidentified Meal"
-        
+            meal_match = re.search(r"meal_name[:=]\s*(.+?)(?:\n|$)", response_text, re.IGNORECASE)
+            if meal_match:
+                meal_name = meal_match.group(1).strip()
         if not calories:
-            # Try to find any number that might be calories
-            cal_match = re.search(r"(\d+)\s*calories?", response_text, re.IGNORECASE)
-            if cal_match:
-                calories = int(cal_match.group(1))
-        
-        if not recommendation:
-            # Use the full response as recommendation if parsing failed
-            recommendation = response_text[:500]  # Limit length
+            calories_match = re.search(r"calories[:=]\s*(\d+)", response_text, re.IGNORECASE)
+            if calories_match:
+                calories = int(calories_match.group(1))
+        if not recommendation_level:
+            rec_level_match = re.search(r"(YES|CAREFUL|NO)", response_text, re.IGNORECASE)
+            if rec_level_match:
+                recommendation_level = rec_level_match.group(1).upper()
+        if not recommendation_text:
+            rec_text_match = re.search(r"recommendation[_:\-]\s*(.+)", response_text, re.IGNORECASE | re.DOTALL)
+            if rec_text_match:
+                recommendation_text = rec_text_match.group(1).strip()
+
+        # Fallback defaults
+        meal_name = meal_name or "Unidentified Meal"
+        recommendation_level = (recommendation_level or "CAREFUL").upper()
+        recommendation_text = recommendation_text or "Recommendation not available."
 
         return {
-            "meal_name": meal_name or "Unidentified Meal",
+            "meal_name": meal_name,
             "calories": calories,
-            "recommendation": recommendation,
+            "recommendation_level": recommendation_level,
+            "recommendation_text": recommendation_text,
+            "carbs_g": carbs_g,
             "raw_response": response_text
         }
 
@@ -515,9 +524,11 @@ class GeminiService:
                 "type": "food",
                 "meal": {
                     "meal_name": meal.get("meal_name"),
-                    "calories": meal.get("calories")
+                    "calories": meal.get("calories"),
+                    "carbs_g": meal.get("carbs_g")
                 },
-                "recommendation": meal.get("recommendation"),
+                "recommendation_level": meal.get("recommendation_level"),
+                "recommendation": meal.get("recommendation_text"),
                 "raw_response": meal.get("raw_response")
             }
 

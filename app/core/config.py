@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "Chatbot API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+
+    # Database
+    DATABASE_URL: Optional[str] = None
     
     # System Prompt for Diabetes Health Assistant
     SYSTEM_PROMPT: str = (

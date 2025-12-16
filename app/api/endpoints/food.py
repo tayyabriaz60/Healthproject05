@@ -1,10 +1,18 @@
 """
-Food analysis endpoints (image upload to analyze meals for diabetes patients).
+Image analysis endpoint (auto-detect glucose vs food).
 """
-from fastapi import APIRouter, HTTPException, UploadFile, File, Query
 import mimetypes
+import uuid
+from pathlib import Path
 from typing import Optional
+
+from fastapi import APIRouter, HTTPException, UploadFile, File, Query, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.services.gemini_service import GeminiService
+from app.core.config import BASE_DIR
+from app.db import get_db
+from app.models import ChatSession, Message
 
 
 api_router = APIRouter(prefix="/api/ai", tags=["ai"])
@@ -20,67 +28,48 @@ def get_gemini_service() -> GeminiService:
     return _gemini_service_instance
 
 
-@api_router.post("/analyze-food")
-async def ai_analyze_food(
-    image: UploadFile = File(...),
-    health_context: Optional[str] = Query(None, description="Optional health context (e.g., latest glucose reading)")
-):
-    """
-    Analyze a food image and return meal name, estimated calories, and diabetes-friendly recommendation.
-    
-    Optional query parameter:
-    - health_context: Provide health context like "Latest glucose: 125 mg/dL" for personalized advice
-    """
-    try:
-        # Allow missing/unknown content types by inferring from filename; still require an image/* guess
-        content_type = image.content_type
-        if not content_type or content_type == "application/octet-stream":
-            guessed, _ = mimetypes.guess_type(image.filename or "")
-            content_type = guessed or "image/jpeg"
-        if not content_type.startswith("image/"):
-            raise HTTPException(status_code=400, detail="File must be an image")
+def _save_image_to_disk(data: bytes, content_type: str) -> str:
+    """Save uploaded image to media/chat_images and return relative path."""
+    media_root = BASE_DIR / "media" / "chat_images"
+    media_root.mkdir(parents=True, exist_ok=True)
+    ext = mimetypes.guess_extension(content_type) or ".jpg"
+    file_name = f"{uuid.uuid4()}{ext}"
+    rel_path = Path("chat_images") / file_name
+    abs_path = media_root / file_name
+    with open(abs_path, "wb") as f:
+        f.write(data)
+    return rel_path.as_posix()
 
-        data = await image.read()
-        if not data:
-            raise HTTPException(status_code=400, detail="Image file is empty")
 
-        gemini_service = get_gemini_service()
-        result = gemini_service.analyze_food_image(
-            image_data=data,
-            mime_type=content_type,
-            health_context=health_context
-        )
-
-        return {
-            "success": True,
-            "meal": {
-                "meal_name": result.get("meal_name"),
-                "calories": result.get("calories")
-            },
-            "recommendation": result.get("recommendation"),
-            "raw_response": result.get("raw_response")
-        }
-
-    except HTTPException:
-        raise
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Food analysis failed: {str(e)}")
+async def _get_or_create_session(db: AsyncSession, chat_id: Optional[str], user_id: Optional[str]) -> ChatSession:
+    session: Optional[ChatSession] = None
+    if chat_id:
+        session = await db.get(ChatSession, chat_id)
+    if session is None:
+        chat_id = chat_id or str(uuid.uuid4())
+        session = ChatSession(id=chat_id, user_id=user_id)
+        db.add(session)
+    elif user_id and not session.user_id:
+        session.user_id = user_id
+    return session
 
 
 @api_router.post("/analyze-image")
 async def ai_analyze_image(
     image: UploadFile = File(...),
-    health_context: Optional[str] = Query(None, description="Optional health context for food analysis")
+    health_context: Optional[str] = Query(None, description="Optional health context for food analysis"),
+    chat_id: Optional[str] = Query(None, description="Optional chat session ID to attach this analysis to"),
+    user_id: Optional[str] = Query(None, description="Optional user ID (e.g. Firebase UID)"),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Smart image analysis:
     - If the image is a glucose meter, returns glucose reading and analysis.
     - If the image is food, returns meal info, calories, and diabetes-friendly recommendation.
+    Stores the image on disk and persists user+assistant messages in the database.
     """
     try:
-        # Allow missing/unknown content types by inferring from filename; still require an image/* guess
+        # Validate content type
         content_type = image.content_type
         if not content_type or content_type == "application/octet-stream":
             guessed, _ = mimetypes.guess_type(image.filename or "")
@@ -92,6 +81,10 @@ async def ai_analyze_image(
         if not data:
             raise HTTPException(status_code=400, detail="Image file is empty")
 
+        # Save image to disk
+        image_path = _save_image_to_disk(data, content_type)
+
+        # Analyze with Gemini (auto-detect glucose vs food)
         gemini_service = get_gemini_service()
         result = gemini_service.analyze_image_auto(
             image_data=data,
@@ -99,8 +92,58 @@ async def ai_analyze_image(
             health_context=health_context
         )
 
+        # Persist to DB (session + messages)
+        session = await _get_or_create_session(db, chat_id, user_id)
+        chat_id = session.id
+
+        assistant_text = ""
+        if result.get("type") == "glucose":
+            reading = result.get("reading") or {}
+            value = reading.get("value")
+            unit = reading.get("unit")
+            analysis = result.get("analysis") or ""
+            parts = [
+                "Detected: Glucose Meter",
+                f"Glucose: {value} {unit}" if value is not None and unit else None,
+                f"Analysis: {analysis}" if analysis else None,
+            ]
+            assistant_text = "\n".join([p for p in parts if p])
+        elif result.get("type") == "food":
+            meal = result.get("meal") or {}
+            name = meal.get("meal_name") or "Unidentified Meal"
+            calories = meal.get("calories")
+            rec = result.get("recommendation") or ""
+            parts = [
+                "Detected: Food",
+                f"Meal: {name}",
+                f"Calories: {calories}" if calories is not None else None,
+                f"Recommendation: {rec}" if rec else None,
+            ]
+            assistant_text = "\n".join([p for p in parts if p])
+        else:
+            assistant_text = "Could not detect if this is glucose meter or food."
+
+        db.add_all(
+            [
+                Message(
+                    chat_session_id=chat_id,
+                    role="user",
+                    text="",
+                    image_path=image_path,
+                ),
+                Message(
+                    chat_session_id=chat_id,
+                    role="assistant",
+                    text=assistant_text,
+                ),
+            ]
+        )
+        await db.commit()
+
         return {
             "success": True,
+            "chat_id": chat_id,
+            "image_path": image_path,
             **result
         }
 

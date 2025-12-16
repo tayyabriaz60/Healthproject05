@@ -4,8 +4,12 @@ Run this file with Uvicorn to start the server.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
-from app.api.endpoints import chat, glucose, food
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+from app.core.config import settings, BASE_DIR
+from app.api.endpoints import chat, food
+from app.db import init_db
 
 # Create FastAPI application instance
 app = FastAPI(
@@ -25,8 +29,18 @@ app.add_middleware(
 
 # Include routers
 app.include_router(chat.api_router)
-app.include_router(glucose.api_router)
 app.include_router(food.api_router)
+
+# Serve media files (stored images) from /media
+media_root = BASE_DIR / "media"
+media_root.mkdir(parents=True, exist_ok=True)
+app.mount("/media", StaticFiles(directory=str(media_root)), name="media")
+
+
+@app.on_event("startup")
+async def on_startup() -> None:
+    """Application startup hook."""
+    await init_db()
 
 
 @app.get("/")

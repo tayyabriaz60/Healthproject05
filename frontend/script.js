@@ -317,7 +317,8 @@ async function uploadGlucoseImage(file) {
         // Get base URL from chat API URL
         const chatApiUrl = document.getElementById('apiUrl').value;
         const baseUrl = chatApiUrl.replace('/api/chat', '');
-        const glucoseUrl = baseUrl + '/api/ai/analyze-glucose';
+        // Unified auto-detect endpoint (will return type = glucose or food)
+        const glucoseUrl = baseUrl + '/api/ai/analyze-image';
         
         // Create FormData for file upload
         const formData = new FormData();
@@ -337,7 +338,7 @@ async function uploadGlucoseImage(file) {
         const data = await response.json();
         
         // Display results
-        if (data.success) {
+        if (data.success && data.type === 'glucose') {
             resultDiv.className = 'glucose-result show';
             resultDiv.innerHTML = `
                 <h4>📊 Glucose Reading</h4>
@@ -351,6 +352,15 @@ async function uploadGlucoseImage(file) {
                         <p>${data.analysis}</p>
                     </div>
                 ` : ''}
+            `;
+        } else if (data.success && data.type === 'food') {
+            // Fallback if the image was classified as food
+            resultDiv.className = 'glucose-result show';
+            resultDiv.innerHTML = `
+                <h4>🍽️ Detected: Food (not glucose)</h4>
+                <p>Meal: ${data.meal?.meal_name || 'Unidentified'}</p>
+                ${data.meal?.calories ? `<p>Calories: ${data.meal.calories}</p>` : ''}
+                ${data.recommendation ? `<p>${data.recommendation}</p>` : ''}
             `;
         } else {
             throw new Error('Analysis failed');
@@ -423,7 +433,8 @@ async function uploadFoodImage(file) {
         // Get base URL from chat API URL
         const chatApiUrl = document.getElementById('apiUrl').value;
         const baseUrl = chatApiUrl.replace('/api/chat', '');
-        const foodUrl = new URL(baseUrl + '/api/ai/analyze-food');
+        // Unified auto-detect endpoint (returns type food or glucose)
+        const foodUrl = new URL(baseUrl + '/api/ai/analyze-image');
         
         // Add health context as query parameter if provided
         if (healthContext) {
@@ -448,18 +459,18 @@ async function uploadFoodImage(file) {
         const data = await response.json();
         
         // Display results
-        if (data.success) {
+        if (data.success && data.type === 'food') {
             resultDiv.className = 'food-result show';
             
-            // Parse recommendation to extract status (YES/CAREFUL/NO)
-            const recommendation = data.recommendation || '';
+            const recommendationText = data.recommendation || '';
+            const levelRaw = (data.recommendation_level || '').toUpperCase();
             let statusClass = 'careful';
-            let statusText = 'CAREFUL';
-            
-            if (recommendation.toUpperCase().includes('YES')) {
+            let statusText = levelRaw || 'CAREFUL';
+
+            if (levelRaw === 'YES') {
                 statusClass = 'yes';
                 statusText = 'YES';
-            } else if (recommendation.toUpperCase().includes('NO')) {
+            } else if (levelRaw === 'NO') {
                 statusClass = 'no';
                 statusText = 'NO';
             }
@@ -468,14 +479,27 @@ async function uploadFoodImage(file) {
                 <h4>🍽️ Meal Analysis</h4>
                 <div class="food-meal">
                     <div class="meal-name">${data.meal.meal_name || 'Unidentified Meal'}</div>
-                    <div class="calories">${data.meal.calories ? data.meal.calories + ' calories' : 'Calories: Not estimated'}</div>
+                    <div class="calories">
+                        ${data.meal.calories ? data.meal.calories + ' calories' : 'Calories: Not estimated'}
+                    </div>
+                    ${data.meal.carbs_g != null ? `
+                        <div class="calories">${data.meal.carbs_g} g carbs</div>
+                    ` : ''}
                 </div>
-                ${data.recommendation ? `
+                ${recommendationText ? `
                     <div class="food-recommendation">
                         <span class="status ${statusClass}">${statusText}</span>
-                        <span>${data.recommendation}</span>
+                        <span>${recommendationText}</span>
                     </div>
                 ` : ''}
+            `;
+        } else if (data.success && data.type === 'glucose') {
+            // If image was actually glucose, show glucose info
+            resultDiv.className = 'food-result show';
+            resultDiv.innerHTML = `
+                <h4>🩺 Detected: Glucose Meter (not food)</h4>
+                <p>Glucose: ${data.reading?.value ?? '-'} ${data.reading?.unit ?? ''}</p>
+                ${data.analysis ? `<p>${data.analysis}</p>` : ''}
             `;
         } else {
             throw new Error('Analysis failed');
@@ -580,18 +604,24 @@ async function uploadSmartImage(file) {
                 ` : ''}
             `;
         } else if (data.type === 'food') {
-            const recommendation = data.recommendation || '';
+            const recommendationText = data.recommendation || '';
+            const levelRaw = (data.recommendation_level || '').toUpperCase();
             resultDiv.innerHTML = `
                 <h4>🍽️ Detected: Food</h4>
                 <span class="smart-type food">FOOD</span>
                 <div class="smart-meal">
                     <div class="meal-name">${data.meal.meal_name || 'Unidentified Meal'}</div>
-                    <div class="calories">${data.meal.calories ? data.meal.calories + ' calories' : 'Calories: Not estimated'}</div>
+                    <div class="calories">
+                        ${data.meal.calories ? data.meal.calories + ' calories' : 'Calories: Not estimated'}
+                    </div>
+                    ${data.meal.carbs_g != null ? `
+                        <div class="calories">${data.meal.carbs_g} g carbs</div>
+                    ` : ''}
                 </div>
-                ${recommendation ? `
+                ${recommendationText ? `
                     <div class="smart-recommendation">
-                        <strong>Recommendation:</strong>
-                        <p>${recommendation}</p>
+                        <strong>Recommendation${levelRaw ? ` (${levelRaw})` : ''}:</strong>
+                        <p>${recommendationText}</p>
                     </div>
                 ` : ''}
             `;

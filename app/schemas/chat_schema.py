@@ -9,6 +9,7 @@ class ChatRequest(BaseModel):
     """Request schema for chat endpoint."""
     message: str = Field(..., description="User's message to the chatbot", min_length=1)
     chat_id: Optional[str] = Field(None, description="Chat session ID for multi-turn conversations")
+    user_id: Optional[str] = Field(None, description="Firebase user ID (optional, for linking sessions to users)")
 
 
 class ChatResponse(BaseModel):
@@ -31,6 +32,10 @@ class MessageHistory(BaseModel):
     """Schema for a single message in chat history."""
     role: str = Field(..., description="Message role: 'user' or 'model'")
     text: str = Field(..., description="Message content")
+    image_path: Optional[str] = Field(
+        None,
+        description="Optional relative image path if this message is associated with an image",
+    )
 
 
 class ChatHistoryResponse(BaseModel):
