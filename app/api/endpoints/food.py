@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.gemini_service import GeminiService
 from app.core.config import BASE_DIR
 from app.db import get_db
-from app.models import ChatSession, Message
+from app.models import ChatSession, Message, GlucoseReading, FoodEvent
 
 
 api_router = APIRouter(prefix="/api/ai", tags=["ai"])
@@ -123,21 +123,75 @@ async def ai_analyze_image(
         else:
             assistant_text = "Could not detect if this is glucose meter or food."
 
-        db.add_all(
-            [
-                Message(
-                    chat_session_id=chat_id,
-                    role="user",
-                    text="",
-                    image_path=image_path,
-                ),
-                Message(
-                    chat_session_id=chat_id,
-                    role="assistant",
-                    text=assistant_text,
-                ),
-            ]
+        # Create message records and flush to get their IDs
+        user_message = Message(
+            chat_session_id=chat_id,
+            role="user",
+            text="",
+            image_path=image_path,
         )
+        assistant_message = Message(
+            chat_session_id=chat_id,
+            role="assistant",
+            text=assistant_text,
+        )
+        db.add_all([user_message, assistant_message])
+        await db.flush()
+
+        # Store structured analytics
+        if result.get("type") == "glucose":
+            reading = result.get("reading") or {}
+            value = reading.get("value")
+            unit = reading.get("unit")
+            if value is not None and unit is not None:
+                glucose_row = GlucoseReading(
+                    user_id=user_id,
+                    chat_session_id=chat_id,
+                    message_id=assistant_message.id,
+                    image_path=image_path,
+                    value=float(value),
+                    unit=str(unit),
+                )
+                db.add(glucose_row)
+
+        elif result.get("type") == "food":
+            meal = result.get("meal") or {}
+            name = meal.get("meal_name") or "Unidentified Meal"
+            calories = meal.get("calories")
+            carbs_g = meal.get("carbs_g")
+            recommendation_level = result.get("recommendation_level")
+            recommendation = result.get("recommendation") or ""
+
+            # Attempt to link to latest glucose reading for this user
+            latest_glucose_id = None
+            if user_id:
+                from sqlalchemy import select
+                from app.models import GlucoseReading as GRModel
+
+                stmt = (
+                    select(GRModel)
+                    .where(GRModel.user_id == user_id)
+                    .order_by(GRModel.taken_at.desc())
+                    .limit(1)
+                )
+                res = await db.execute(stmt)
+                latest = res.scalar_one_or_none()
+                if latest is not None:
+                    latest_glucose_id = latest.id
+
+            food_event = FoodEvent(
+                user_id=user_id,
+                chat_session_id=chat_id,
+                message_id=assistant_message.id,
+                image_path=image_path,
+                meal_name=name,
+                calories=calories,
+                carbs_g=carbs_g,
+                recommendation_level=recommendation_level,
+                glucose_reading_id=latest_glucose_id,
+            )
+            db.add(food_event)
+
         await db.commit()
 
         return {
