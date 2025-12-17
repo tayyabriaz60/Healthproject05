@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from app.core.config import settings, BASE_DIR
-from app.api.endpoints import chat, food
+from app.api.endpoints import chat, food, analytics
 from app.db import init_db
 
 # Create FastAPI application instance
@@ -30,6 +30,7 @@ app.add_middleware(
 # Include routers
 app.include_router(chat.api_router)
 app.include_router(food.api_router)
+app.include_router(analytics.api_router)
 
 # Serve media files (stored images) from /media
 media_root = BASE_DIR / "media"
